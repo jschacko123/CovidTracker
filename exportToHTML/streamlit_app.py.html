@@ -1,0 +1,263 @@
+<html>
+<head>
+<title>streamlit_app.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+streamlit_app.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">streamlit </span><span class="s0">as </span><span class="s1">st</span>
+<span class="s0">import </span><span class="s1">requests</span>
+<span class="s0">from </span><span class="s1">matplotlib</span><span class="s2">.</span><span class="s1">ticker </span><span class="s0">import </span><span class="s1">FuncFormatter</span>
+<span class="s0">from </span><span class="s1">opencage</span><span class="s2">.</span><span class="s1">geocoder </span><span class="s0">import </span><span class="s1">OpenCageGeocode</span>
+<span class="s0">from </span><span class="s1">streamlit_folium </span><span class="s0">import </span><span class="s1">folium_static</span>
+<span class="s0">import </span><span class="s1">folium</span>
+<span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+<span class="s0">import </span><span class="s1">matplotlib</span><span class="s2">.</span><span class="s1">pyplot </span><span class="s0">as </span><span class="s1">plt</span>
+
+<span class="s1">st</span><span class="s2">.</span><span class="s1">set_page_config</span><span class="s2">(</span>
+    <span class="s1">page_title</span><span class="s2">=</span><span class="s3">&quot;COVID-19 Report by Country&quot;</span><span class="s2">,</span>
+    <span class="s1">layout</span><span class="s2">= </span><span class="s3">&quot;wide&quot;</span><span class="s2">,</span>
+    <span class="s1">menu_items </span><span class="s2">= {</span>
+        <span class="s3">'Get Help' </span><span class="s2">: </span><span class="s3">'https://docs.streamlit.io/'</span><span class="s2">,</span>
+        <span class="s3">'About' </span><span class="s2">: </span><span class="s3">'# Welcome to the Covid Tracker Page. Developed by Jeslyn Chacko'</span>
+    <span class="s2">}</span>
+<span class="s2">)</span>
+<span class="s4"># Function to fetch COVID-19 data</span>
+<span class="s0">def </span><span class="s1">fetch_covid_data</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">is_code</span><span class="s2">=</span><span class="s0">False</span><span class="s2">):</span>
+    <span class="s0">if </span><span class="s1">is_code</span><span class="s2">:</span>
+        <span class="s1">url </span><span class="s2">= </span><span class="s3">&quot;https://covid-19-data.p.rapidapi.com/country/code&quot;</span>
+        <span class="s1">querystring </span><span class="s2">= {</span><span class="s3">&quot;code&quot;</span><span class="s2">: </span><span class="s1">country</span><span class="s2">, </span><span class="s3">&quot;date-format&quot;</span><span class="s2">: </span><span class="s3">&quot;yyyy-mm-dd&quot;</span><span class="s2">, </span><span class="s3">&quot;format&quot;</span><span class="s2">: </span><span class="s3">&quot;json&quot;</span><span class="s2">}</span>
+    <span class="s0">else</span><span class="s2">:</span>
+        <span class="s1">url </span><span class="s2">= </span><span class="s3">&quot;https://covid-19-data.p.rapidapi.com/country&quot;</span>
+        <span class="s1">querystring </span><span class="s2">= {</span><span class="s3">&quot;name&quot;</span><span class="s2">: </span><span class="s1">country</span><span class="s2">, </span><span class="s3">&quot;format&quot;</span><span class="s2">: </span><span class="s3">&quot;json&quot;</span><span class="s2">}</span>
+    <span class="s1">headers </span><span class="s2">= {</span>
+        <span class="s3">&quot;X-RapidAPI-Key&quot;</span><span class="s2">: </span><span class="s3">&quot;4fae334dfcmsh32d4279bdd4553dp147d05jsn429234162e47&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;X-RapidAPI-Host&quot;</span><span class="s2">: </span><span class="s3">&quot;covid-19-data.p.rapidapi.com&quot;</span>
+    <span class="s2">}</span>
+
+    <span class="s1">response </span><span class="s2">= </span><span class="s1">requests</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">url</span><span class="s2">, </span><span class="s1">headers</span><span class="s2">=</span><span class="s1">headers</span><span class="s2">, </span><span class="s1">params</span><span class="s2">=</span><span class="s1">querystring</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">response</span><span class="s2">.</span><span class="s1">status_code </span><span class="s2">== </span><span class="s5">200</span><span class="s2">:</span>
+        <span class="s1">data </span><span class="s2">= </span><span class="s1">response</span><span class="s2">.</span><span class="s1">json</span><span class="s2">()</span>
+        <span class="s0">if </span><span class="s1">data</span><span class="s2">:</span>
+            <span class="s0">return </span><span class="s2">{</span>
+                <span class="s3">&quot;country&quot;</span><span class="s2">: </span><span class="s1">country</span><span class="s2">,</span>
+                <span class="s3">&quot;deaths&quot;</span><span class="s2">: </span><span class="s1">data</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'deaths'</span><span class="s2">, </span><span class="s3">'Data not available'</span><span class="s2">),</span>
+                <span class="s3">&quot;confirmed&quot;</span><span class="s2">: </span><span class="s1">data</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'confirmed'</span><span class="s2">, </span><span class="s3">'Data not available'</span><span class="s2">),</span>
+                <span class="s3">&quot;recovered&quot;</span><span class="s2">: </span><span class="s1">data</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'recovered'</span><span class="s2">, </span><span class="s3">'Data not available'</span><span class="s2">),</span>
+                <span class="s3">&quot;critical&quot;</span><span class="s2">: </span><span class="s1">data</span><span class="s2">[</span><span class="s5">0</span><span class="s2">].</span><span class="s1">get</span><span class="s2">(</span><span class="s3">'critical'</span><span class="s2">, </span><span class="s3">'Data not available'</span><span class="s2">)</span>
+            <span class="s2">}</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s0">return </span><span class="s2">{</span><span class="s3">&quot;error&quot;</span><span class="s2">: </span><span class="s3">&quot;No data available&quot;</span><span class="s2">}</span>
+    <span class="s0">else</span><span class="s2">:</span>
+        <span class="s0">return </span><span class="s2">{</span><span class="s3">&quot;error&quot;</span><span class="s2">: </span><span class="s3">f&quot;Failed to retrieve data: </span><span class="s0">{</span><span class="s1">response</span><span class="s2">.</span><span class="s1">status_code</span><span class="s0">}</span><span class="s3">&quot;</span><span class="s2">}</span>
+
+
+<span class="s4"># Function to fetch the list of countries</span>
+<span class="s2">@</span><span class="s1">st</span><span class="s2">.</span><span class="s1">cache_data</span>
+<span class="s0">def </span><span class="s1">get_list_of_countries</span><span class="s2">():</span>
+    <span class="s1">url </span><span class="s2">= </span><span class="s3">&quot;https://covid-19-data.p.rapidapi.com/help/countries?format=json&quot;</span>
+    <span class="s1">headers </span><span class="s2">= {</span>
+        <span class="s3">&quot;X-RapidAPI-Key&quot;</span><span class="s2">: </span><span class="s3">&quot;4fae334dfcmsh32d4279bdd4553dp147d05jsn429234162e47&quot;</span><span class="s2">,</span>
+        <span class="s3">&quot;X-RapidAPI-Host&quot;</span><span class="s2">: </span><span class="s3">&quot;covid-19-data.p.rapidapi.com&quot;</span>
+    <span class="s2">}</span>
+
+    <span class="s1">response </span><span class="s2">= </span><span class="s1">requests</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">url</span><span class="s2">, </span><span class="s1">headers</span><span class="s2">=</span><span class="s1">headers</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">response</span><span class="s2">.</span><span class="s1">json</span><span class="s2">()</span>
+
+<span class="s2">@</span><span class="s1">st</span><span class="s2">.</span><span class="s1">cache_data</span>
+<span class="s0">def </span><span class="s1">map_creator</span><span class="s2">(</span><span class="s1">latitude</span><span class="s2">, </span><span class="s1">longitude</span><span class="s2">):</span>
+    <span class="s1">m </span><span class="s2">= </span><span class="s1">folium</span><span class="s2">.</span><span class="s1">Map</span><span class="s2">(</span><span class="s1">location</span><span class="s2">=[</span><span class="s1">latitude</span><span class="s2">, </span><span class="s1">longitude</span><span class="s2">], </span><span class="s1">zoom_start</span><span class="s2">=</span><span class="s5">3</span><span class="s2">)</span>
+    <span class="s1">folium</span><span class="s2">.</span><span class="s1">Marker</span><span class="s2">([</span><span class="s1">latitude</span><span class="s2">, </span><span class="s1">longitude</span><span class="s2">], </span><span class="s1">popup</span><span class="s2">=</span><span class="s3">&quot;Location&quot;</span><span class="s2">, </span><span class="s1">tooltip</span><span class="s2">=</span><span class="s3">&quot;Location&quot;</span><span class="s2">).</span><span class="s1">add_to</span><span class="s2">(</span><span class="s1">m</span><span class="s2">)</span>
+    <span class="s0">return </span><span class="s1">m</span>
+
+<span class="s4"># Function to get coordinates using OpenCage</span>
+<span class="s0">def </span><span class="s1">get_coordinates</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">is_code</span><span class="s2">=</span><span class="s0">False</span><span class="s2">):</span>
+    <span class="s1">key </span><span class="s2">= </span><span class="s3">'4b2c9c34e0994a778bb384f4f24cc359'</span>
+    <span class="s1">geocoder </span><span class="s2">= </span><span class="s1">OpenCageGeocode</span><span class="s2">(</span><span class="s1">key</span><span class="s2">)</span>
+    <span class="s0">if </span><span class="s1">is_code</span><span class="s2">:</span>
+        <span class="s1">result </span><span class="s2">= </span><span class="s1">geocoder</span><span class="s2">.</span><span class="s1">geocode</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">no_annotations</span><span class="s2">=</span><span class="s3">'1'</span><span class="s2">, </span><span class="s1">countrycode</span><span class="s2">=</span><span class="s1">country</span><span class="s2">)</span>
+    <span class="s0">else</span><span class="s2">:</span>
+        <span class="s1">result </span><span class="s2">= </span><span class="s1">geocoder</span><span class="s2">.</span><span class="s1">geocode</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">no_annotations</span><span class="s2">=</span><span class="s3">'1'</span><span class="s2">)</span>
+    <span class="s0">if </span><span class="s1">result </span><span class="s0">and </span><span class="s1">len</span><span class="s2">(</span><span class="s1">result</span><span class="s2">):</span>
+        <span class="s0">for </span><span class="s1">res </span><span class="s0">in </span><span class="s1">result</span><span class="s2">:</span>
+            <span class="s0">if </span><span class="s3">'country' </span><span class="s0">in </span><span class="s1">res</span><span class="s2">[</span><span class="s3">'components'</span><span class="s2">]:</span>
+                <span class="s0">return </span><span class="s1">res</span><span class="s2">[</span><span class="s3">'geometry'</span><span class="s2">][</span><span class="s3">'lat'</span><span class="s2">], </span><span class="s1">res</span><span class="s2">[</span><span class="s3">'geometry'</span><span class="s2">][</span><span class="s3">'lng'</span><span class="s2">]</span>
+    <span class="s0">return None</span><span class="s2">, </span><span class="s0">None</span>
+
+
+<span class="s4"># Streamlit app</span>
+<span class="s1">st</span><span class="s2">.</span><span class="s1">title</span><span class="s2">(</span><span class="s3">&quot;COVID-19 Report by Country&quot;</span><span class="s2">)</span>
+<span class="s1">st</span><span class="s2">.</span><span class="s1">header</span><span class="s2">(</span><span class="s3">&quot;Streamlit and Covid Tracker API&quot;</span><span class="s2">)</span>
+
+<span class="s1">add_selectbox </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">sidebar</span><span class="s2">.</span><span class="s1">selectbox</span><span class="s2">(</span>
+    <span class="s3">&quot;More Information&quot;</span><span class="s2">,</span>
+    <span class="s2">[</span><span class="s3">&quot;Homepage&quot;</span><span class="s2">, </span><span class="s3">&quot;Search by Country&quot;</span><span class="s2">, </span><span class="s3">&quot;Top 10 Chart&quot;</span><span class="s2">]</span>
+<span class="s2">)</span>
+<span class="s0">if </span><span class="s1">add_selectbox </span><span class="s2">== </span><span class="s3">&quot;Homepage&quot;</span><span class="s2">:</span>
+    <span class="s1">st</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span>
+        <span class="s3">&quot;Welcome to the COVID-19 Tracker website! Here you can see COVID data based on countries all over the world.&quot;</span><span class="s2">)</span>
+    <span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;Here are some reminders to stay healthy and prevent COVID:&quot;</span><span class="s2">)</span>
+    <span class="s4"># checkbox widget</span>
+    <span class="s1">show_tips </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">checkbox</span><span class="s2">(</span><span class="s3">&quot;Show Health Tips&quot;</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">show_tips</span><span class="s2">:</span>
+        <span class="s1">st</span><span class="s2">.</span><span class="s1">markdown</span><span class="s2">(</span><span class="s3">&quot;&quot;&quot; 
+            **Health Tips:** 
+            - **Wear Masks:** Always wear a mask in public spaces to reduce the risk of spreading the virus. 
+            - **Social Distancing:** Maintain a distance of at least 6 feet from others to avoid transmission. 
+            - **Hand Hygiene:** Wash your hands frequently with soap and water for at least 20 seconds. 
+            - **Avoid Crowded Places:** Avoid large gatherings and crowded places to minimize exposure. 
+            - **Stay Informed:** Keep up-to-date with the latest guidelines and recommendations from health authorities. 
+            &quot;&quot;&quot;</span><span class="s2">)</span>
+
+    <span class="s1">video_url </span><span class="s2">= </span><span class="s3">&quot;https://www.youtube.com/watch?v=mSADUWSqNqU&quot;</span>
+    <span class="s1">st</span><span class="s2">.</span><span class="s1">video</span><span class="s2">(</span><span class="s1">video_url</span><span class="s2">)</span>
+
+<span class="s0">if </span><span class="s1">add_selectbox </span><span class="s2">== </span><span class="s3">&quot;Search by Country&quot;</span><span class="s2">:</span>
+    <span class="s1">st</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s3">&quot;See the COVID stats on any Country.&quot;</span><span class="s2">)</span>
+
+    <span class="s1">category </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">selectbox</span><span class="s2">(</span><span class="s3">&quot;Choose a Category&quot;</span><span class="s2">, [</span><span class="s3">&quot;Enter Country Code&quot;</span><span class="s2">, </span><span class="s3">&quot;Select from Dropdown&quot;</span><span class="s2">])</span>
+
+    <span class="s0">if </span><span class="s1">category </span><span class="s2">== </span><span class="s3">&quot;Enter Country Code&quot;</span><span class="s2">:</span>
+        <span class="s1">country </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">text_input</span><span class="s2">(</span><span class="s3">&quot;Enter the country code (Example: 'IT', 'USA', 'CA')&quot;</span><span class="s2">)</span>
+        <span class="s1">is_code </span><span class="s2">= </span><span class="s0">True</span>
+        <span class="s1">data_options </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">multiselect</span><span class="s2">(</span><span class="s3">&quot;What results would you like to see?&quot;</span><span class="s2">,</span>
+                                      <span class="s2">[</span><span class="s3">&quot;Number of deaths&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of confirmed cases&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of recovered cases&quot;</span><span class="s2">,</span>
+                                       <span class="s3">&quot;Number of critical cases&quot;</span><span class="s2">],</span>
+                                      <span class="s2">[</span><span class="s3">&quot;Number of deaths&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of confirmed cases&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of recovered cases&quot;</span><span class="s2">,</span>
+                                       <span class="s3">&quot;Number of critical cases&quot;</span><span class="s2">])</span>
+        <span class="s0">if </span><span class="s1">st</span><span class="s2">.</span><span class="s1">button</span><span class="s2">(</span><span class="s3">&quot;Get Report&quot;</span><span class="s2">):</span>
+            <span class="s0">if </span><span class="s1">country</span><span class="s2">:</span>
+                <span class="s1">result </span><span class="s2">= </span><span class="s1">fetch_covid_data</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">is_code</span><span class="s2">)</span>
+                <span class="s0">if </span><span class="s3">'error' </span><span class="s0">in </span><span class="s1">result</span><span class="s2">:</span>
+                    <span class="s1">st</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'error'</span><span class="s2">])</span>
+                <span class="s0">else</span><span class="s2">:</span>
+                    <span class="s1">st</span><span class="s2">.</span><span class="s1">success</span><span class="s2">(</span><span class="s3">&quot;Success!&quot;</span><span class="s2">)</span>
+                    <span class="s1">st</span><span class="s2">.</span><span class="s1">subheader</span><span class="s2">(</span><span class="s3">f&quot;COVID-19 Report for </span><span class="s0">{</span><span class="s1">country</span><span class="s0">}</span><span class="s3">:&quot;</span><span class="s2">)</span>
+
+                    <span class="s1">data_dict </span><span class="s2">= {}</span>
+                    <span class="s0">if </span><span class="s3">&quot;Number of deaths&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                        <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of deaths&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'deaths'</span><span class="s2">]]</span>
+                    <span class="s0">if </span><span class="s3">&quot;Number of confirmed cases&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                        <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of confirmed cases&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'confirmed'</span><span class="s2">]]</span>
+                    <span class="s0">if </span><span class="s3">&quot;Number of recovered cases&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                        <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of recovered cases&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'recovered'</span><span class="s2">]]</span>
+                    <span class="s0">if </span><span class="s3">&quot;Number of critical cases&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                        <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of critical cases&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'critical'</span><span class="s2">]]</span>
+
+                    <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">data_dict</span><span class="s2">)</span>
+                    <span class="s1">st</span><span class="s2">.</span><span class="s1">dataframe</span><span class="s2">(</span><span class="s1">df</span><span class="s2">)</span>
+
+                    <span class="s1">latitude</span><span class="s2">, </span><span class="s1">longitude </span><span class="s2">= </span><span class="s1">get_coordinates</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">is_code</span><span class="s2">)</span>
+                    <span class="s0">if </span><span class="s1">latitude </span><span class="s0">and </span><span class="s1">longitude</span><span class="s2">:</span>
+                        <span class="s1">map_ </span><span class="s2">= </span><span class="s1">map_creator</span><span class="s2">(</span><span class="s1">latitude</span><span class="s2">, </span><span class="s1">longitude</span><span class="s2">)</span>
+                        <span class="s1">folium_static</span><span class="s2">(</span><span class="s1">map_</span><span class="s2">)</span>
+                    <span class="s0">else</span><span class="s2">:</span>
+                        <span class="s1">st</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Could not find the location.&quot;</span><span class="s2">)</span>
+            <span class="s0">else</span><span class="s2">:</span>
+                <span class="s1">st</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Please enter or select a country.&quot;</span><span class="s2">)</span>
+
+
+    <span class="s0">if </span><span class="s1">category </span><span class="s2">== </span><span class="s3">&quot;Select from Dropdown&quot;</span><span class="s2">:</span>
+        <span class="s1">countries_dict </span><span class="s2">= </span><span class="s1">get_list_of_countries</span><span class="s2">()</span>
+        <span class="s0">if </span><span class="s1">countries_dict</span><span class="s2">:</span>
+            <span class="s1">countries_list </span><span class="s2">= [</span><span class="s1">country</span><span class="s2">[</span><span class="s3">'name'</span><span class="s2">] </span><span class="s0">for </span><span class="s1">country </span><span class="s0">in </span><span class="s1">countries_dict</span><span class="s2">]</span>
+            <span class="s1">country </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">selectbox</span><span class="s2">(</span><span class="s3">&quot;Select a country&quot;</span><span class="s2">, </span><span class="s1">options</span><span class="s2">=</span><span class="s1">countries_list</span><span class="s2">)</span>
+            <span class="s1">is_code </span><span class="s2">= </span><span class="s0">False</span>
+
+            <span class="s1">data_options </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">multiselect</span><span class="s2">(</span><span class="s3">&quot;What results would you like to see?&quot;</span><span class="s2">,</span>
+                                          <span class="s2">[</span><span class="s3">&quot;Number of deaths&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of confirmed cases&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of recovered cases&quot;</span><span class="s2">,</span>
+                                           <span class="s3">&quot;Number of critical cases&quot;</span><span class="s2">],</span>
+                                          <span class="s2">[</span><span class="s3">&quot;Number of deaths&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of confirmed cases&quot;</span><span class="s2">, </span><span class="s3">&quot;Number of recovered cases&quot;</span><span class="s2">,</span>
+                                           <span class="s3">&quot;Number of critical cases&quot;</span><span class="s2">])</span>
+            <span class="s0">if </span><span class="s1">st</span><span class="s2">.</span><span class="s1">button</span><span class="s2">(</span><span class="s3">&quot;Get Report&quot;</span><span class="s2">):</span>
+                <span class="s0">if </span><span class="s1">country</span><span class="s2">:</span>
+                    <span class="s1">result </span><span class="s2">= </span><span class="s1">fetch_covid_data</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">is_code</span><span class="s2">)</span>
+                    <span class="s0">if </span><span class="s3">'error' </span><span class="s0">in </span><span class="s1">result</span><span class="s2">:</span>
+                        <span class="s1">st</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'error'</span><span class="s2">])</span>
+                    <span class="s0">else</span><span class="s2">:</span>
+                        <span class="s1">st</span><span class="s2">.</span><span class="s1">success</span><span class="s2">(</span><span class="s3">&quot;Success!&quot;</span><span class="s2">)</span>
+                        <span class="s1">st</span><span class="s2">.</span><span class="s1">subheader</span><span class="s2">(</span><span class="s3">f&quot;COVID-19 Report for </span><span class="s0">{</span><span class="s1">country</span><span class="s0">}</span><span class="s3">:&quot;</span><span class="s2">)</span>
+
+                        <span class="s1">data_dict </span><span class="s2">= {}</span>
+                        <span class="s0">if </span><span class="s3">&quot;Number of deaths&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                            <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of deaths&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'deaths'</span><span class="s2">]]</span>
+                        <span class="s0">if </span><span class="s3">&quot;Number of confirmed cases&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                            <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of confirmed cases&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'confirmed'</span><span class="s2">]]</span>
+                        <span class="s0">if </span><span class="s3">&quot;Number of recovered cases&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                            <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of recovered cases&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'recovered'</span><span class="s2">]]</span>
+                        <span class="s0">if </span><span class="s3">&quot;Number of critical cases&quot; </span><span class="s0">in </span><span class="s1">data_options</span><span class="s2">:</span>
+                            <span class="s1">data_dict</span><span class="s2">[</span><span class="s3">&quot;Number of critical cases&quot;</span><span class="s2">] = [</span><span class="s1">result</span><span class="s2">[</span><span class="s3">'critical'</span><span class="s2">]]</span>
+
+                        <span class="s1">df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">data_dict</span><span class="s2">)</span>
+                        <span class="s1">st</span><span class="s2">.</span><span class="s1">dataframe</span><span class="s2">(</span><span class="s1">df</span><span class="s2">)</span>
+
+                        <span class="s1">latitude</span><span class="s2">, </span><span class="s1">longitude </span><span class="s2">= </span><span class="s1">get_coordinates</span><span class="s2">(</span><span class="s1">country</span><span class="s2">, </span><span class="s1">is_code</span><span class="s2">)</span>
+                        <span class="s0">if </span><span class="s1">latitude </span><span class="s0">and </span><span class="s1">longitude</span><span class="s2">:</span>
+                            <span class="s1">map_ </span><span class="s2">= </span><span class="s1">map_creator</span><span class="s2">(</span><span class="s1">latitude</span><span class="s2">, </span><span class="s1">longitude</span><span class="s2">)</span>
+                            <span class="s1">folium_static</span><span class="s2">(</span><span class="s1">map_</span><span class="s2">)</span>
+                        <span class="s0">else</span><span class="s2">:</span>
+                            <span class="s1">st</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Could not find the location.&quot;</span><span class="s2">)</span>
+                <span class="s0">else</span><span class="s2">:</span>
+                    <span class="s1">st</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s3">&quot;Please enter or select a country.&quot;</span><span class="s2">)</span>
+
+<span class="s0">if </span><span class="s1">add_selectbox </span><span class="s2">== </span><span class="s3">&quot;Top 10 Chart&quot;</span><span class="s2">:</span>
+    <span class="s1">data </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">({</span>
+        <span class="s3">'Country'</span><span class="s2">: [</span><span class="s3">'USA'</span><span class="s2">, </span><span class="s3">'India'</span><span class="s2">, </span><span class="s3">'Brazil'</span><span class="s2">, </span><span class="s3">'France'</span><span class="s2">, </span><span class="s3">'Germany'</span><span class="s2">, </span><span class="s3">'UK'</span><span class="s2">, </span><span class="s3">'Russia'</span><span class="s2">, </span><span class="s3">'Turkey'</span><span class="s2">, </span><span class="s3">'Italy'</span><span class="s2">, </span><span class="s3">'Spain'</span><span class="s2">],</span>
+        <span class="s3">'Cases'</span><span class="s2">: [</span><span class="s5">111820082</span><span class="s2">, </span><span class="s5">45035393</span><span class="s2">, </span><span class="s5">38743918</span><span class="s2">, </span><span class="s5">40138560</span><span class="s2">, </span><span class="s5">38828995</span><span class="s2">, </span><span class="s5">24910387</span><span class="s2">, </span><span class="s5">24124215</span><span class="s2">, </span><span class="s5">17232066</span><span class="s2">, </span><span class="s5">26723249</span><span class="s2">, </span><span class="s5">13914811</span><span class="s2">]</span>
+    <span class="s2">})</span>
+
+
+
+    <span class="s1">top_10_countries </span><span class="s2">= </span><span class="s1">data</span><span class="s2">.</span><span class="s1">sort_values</span><span class="s2">(</span><span class="s1">by</span><span class="s2">=</span><span class="s3">'Cases'</span><span class="s2">, </span><span class="s1">ascending</span><span class="s2">=</span><span class="s0">False</span><span class="s2">).</span><span class="s1">head</span><span class="s2">(</span><span class="s5">10</span><span class="s2">)</span>
+
+    <span class="s1">chart_type </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">radio</span><span class="s2">(</span><span class="s3">&quot;Select Chart Type&quot;</span><span class="s2">, (</span><span class="s3">&quot;Bar Graph&quot;</span><span class="s2">, </span><span class="s3">&quot;Line Chart&quot;</span><span class="s2">))</span>
+
+    <span class="s0">if </span><span class="s1">chart_type </span><span class="s2">== </span><span class="s3">&quot;Bar Graph&quot;</span><span class="s2">:</span>
+        <span class="s4"># Color picker</span>
+        <span class="s1">bar_color </span><span class="s2">= </span><span class="s1">st</span><span class="s2">.</span><span class="s1">color_picker</span><span class="s2">(</span><span class="s3">&quot;Pick a color for the bar graph&quot;</span><span class="s2">, </span><span class="s3">&quot;#ff0000&quot;</span><span class="s2">)</span>
+
+        <span class="s1">fig</span><span class="s2">, </span><span class="s1">ax </span><span class="s2">= </span><span class="s1">plt</span><span class="s2">.</span><span class="s1">subplots</span><span class="s2">()</span>
+        <span class="s1">bars </span><span class="s2">= </span><span class="s1">ax</span><span class="s2">.</span><span class="s1">bar</span><span class="s2">(</span><span class="s1">top_10_countries</span><span class="s2">[</span><span class="s3">'Country'</span><span class="s2">], </span><span class="s1">top_10_countries</span><span class="s2">[</span><span class="s3">'Cases'</span><span class="s2">], </span><span class="s1">color</span><span class="s2">=</span><span class="s1">bar_color</span><span class="s2">)</span>
+
+        <span class="s1">ax</span><span class="s2">.</span><span class="s1">set_xlabel</span><span class="s2">(</span><span class="s3">'Country'</span><span class="s2">)</span>
+        <span class="s1">ax</span><span class="s2">.</span><span class="s1">set_ylabel</span><span class="s2">(</span><span class="s3">'Number of COVID-19 Cases'</span><span class="s2">)</span>
+        <span class="s1">ax</span><span class="s2">.</span><span class="s1">set_title</span><span class="s2">(</span><span class="s3">'Top 10 Countries by COVID-19 Cases'</span><span class="s2">)</span>
+        <span class="s1">plt</span><span class="s2">.</span><span class="s1">xticks</span><span class="s2">(</span><span class="s1">rotation</span><span class="s2">=</span><span class="s5">45</span><span class="s2">, </span><span class="s1">ha</span><span class="s2">=</span><span class="s3">'right'</span><span class="s2">)</span>
+
+        <span class="s4"># Set the graph limits</span>
+        <span class="s0">def </span><span class="s1">format_yaxis</span><span class="s2">(</span><span class="s1">value</span><span class="s2">, </span><span class="s1">tick_number</span><span class="s2">):</span>
+            <span class="s0">if </span><span class="s1">value </span><span class="s2">&gt;= </span><span class="s5">1_000_000</span><span class="s2">:</span>
+                <span class="s0">return </span><span class="s3">f'</span><span class="s0">{</span><span class="s1">value </span><span class="s2">/ </span><span class="s5">1_000_000</span><span class="s0">:</span><span class="s3">.1f</span><span class="s0">}</span><span class="s3">M'</span>
+            <span class="s0">elif </span><span class="s1">value </span><span class="s2">&gt;= </span><span class="s5">1_000</span><span class="s2">:</span>
+                <span class="s0">return </span><span class="s3">f'</span><span class="s0">{</span><span class="s1">value </span><span class="s2">/ </span><span class="s5">1_000</span><span class="s0">:</span><span class="s3">.1f</span><span class="s0">}</span><span class="s3">K'</span>
+            <span class="s0">else</span><span class="s2">:</span>
+                <span class="s0">return </span><span class="s1">value</span>
+
+
+        <span class="s1">ax</span><span class="s2">.</span><span class="s1">yaxis</span><span class="s2">.</span><span class="s1">set_major_formatter</span><span class="s2">(</span><span class="s1">FuncFormatter</span><span class="s2">(</span><span class="s1">format_yaxis</span><span class="s2">))</span>
+
+        <span class="s1">ax</span><span class="s2">.</span><span class="s1">set_ylim</span><span class="s2">(</span><span class="s5">0</span><span class="s2">, </span><span class="s1">top_10_countries</span><span class="s2">[</span><span class="s3">'Cases'</span><span class="s2">].</span><span class="s1">max</span><span class="s2">() * </span><span class="s5">1.1</span><span class="s2">)</span>
+
+        <span class="s1">st</span><span class="s2">.</span><span class="s1">pyplot</span><span class="s2">(</span><span class="s1">fig</span><span class="s2">)</span>
+
+    <span class="s0">if </span><span class="s1">chart_type </span><span class="s2">== </span><span class="s3">&quot;Line Chart&quot;</span><span class="s2">:</span>
+        <span class="s1">line_chart_data </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">({</span>
+            <span class="s3">'Cases'</span><span class="s2">: </span><span class="s1">top_10_countries</span><span class="s2">.</span><span class="s1">set_index</span><span class="s2">(</span><span class="s3">'Country'</span><span class="s2">)[</span><span class="s3">'Cases'</span><span class="s2">]</span>
+        <span class="s2">})</span>
+        <span class="s1">st</span><span class="s2">.</span><span class="s1">line_chart</span><span class="s2">(</span><span class="s1">line_chart_data</span><span class="s2">)</span></pre>
+</body>
+</html>
